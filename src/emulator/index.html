@@ -48,6 +48,16 @@
       const controls = document.querySelector('#controls')
       const canvas = document.querySelector('canvas')
       const leds = document.querySelectorAll('.leds i')
+      // The badge caps the strip at OS_LED_MAX (24) to limit power draw.
+      // Translate that hardware range to screen brightness while keeping hue.
+      function ledColor(color) {
+        const channels = [color >>> 16, (color >>> 8) & 255, color & 255]
+        const peak = Math.max(...channels)
+        const brightness = Math.sqrt(Math.min(peak / 24, 1))
+        const scale = (brightness * 255) / peak
+        return 'rgb(' + channels.map((channel) => Math.round(channel * scale)).join(', ') + ')'
+      }
+
       const context = canvas.getContext('2d')
       const framebuffer = document.createElement('canvas')
       framebuffer.width = canvas.width
@@ -236,7 +246,7 @@
             leds.forEach((led, index) => {
               const color = firmware.HEAPU32[start + index]
               if (color) {
-                led.style.setProperty('--light', '#' + color.toString(16).padStart(6, '0'))
+                led.style.setProperty('--light', ledColor(color))
                 led.classList.add('lit')
               } else {
                 led.classList.remove('lit')
