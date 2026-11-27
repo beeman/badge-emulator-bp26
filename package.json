@@ -1,7 +1,7 @@
 {
   "name": "badge-emulator-bp26",
   "scripts": {
-    "android": "expo run:android",
+    "android": "bun run emulator:build && expo run:android",
     "android:build": "expo prebuild -p android",
     "build": "tsc --noEmit && npm run android:build",
     "ci": "tsc --noEmit && npm run lint:check && npm run format:check && npm run android:build",
@@ -13,7 +13,8 @@
     "lint": "expo lint --fix",
     "lint:check": "expo lint",
     "start": "expo start",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "emulator:build": "bash scripts/build-emulator.sh"
   },
   "displayName": "Expo Kit Uniwind example",
   "description": "A template for building a Solana mobile app with Expo, React Native, Solana Kit, and Uniwind.",
@@ -47,6 +48,7 @@
     "react-native-quick-crypto": "^1.1.6",
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.0",
+    "react-native-webview": "^14.0.1",
     "tailwindcss": "~4.1.16",
     "uniwind": "~1.13.0"
   },

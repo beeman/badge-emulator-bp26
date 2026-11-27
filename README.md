@@ -1,43 +1,25 @@
-# badge-emulator-bp26
+# Breakpoint 2026 badge emulator for Android
 
-This is an [Expo](https://expo.dev) project pre-configured with [Uniwind](https://uniwind.dev/) for styling and Solana libraries.
+The Android app boots the Solana OS badge firmware in an Android WebView using the firmware's existing WebAssembly emulator. The 320 × 240 display comes from the firmware framebuffer. On-screen buttons drive the same input lines as the badge, and the eight LEDs show the firmware’s RGB output.
 
-## Technologies
+## Run locally
 
-- [Expo](https://expo.dev)
-- [Uniwind](https://uniwind.dev/) (Tailwind CSS for React Native)
-- [@solana/kit](https://www.solanakit.com/)
-- [@wallet-ui/react-native-kit](https://wallet-ui.dev/)
+1. Install the Expo dependencies with `bun install`.
+2. Install Emscripten and CMake 3.19 or newer.
+3. Run `bun run android` with an Android emulator or phone connected. The first build downloads and compiles the pinned [Solana OS 2.5.1 source](https://github.com/solana-foundation/solana-os/commit/f18d4d7335ccc492a538d7632f102a8a9345869b). Later builds reuse the local cache.
 
-## Get started
+Run `bun run emulator:build` to rebuild the firmware bundle without launching Android. To use a different Solana OS checkout, set `SOLANA_OS_DIR` before running Android. In that checkout, activate the ESP-IDF version pinned in `esp-idf.commit` and run `idf.py -DIDF_TARGET=esp32c5 reconfigure` first.
 
-1. Install dependencies
+If you already have matching `solana-os.js` and `solana-os.wasm` files, run `node scripts/pack-emulator.mjs /path/to/outputs` to bundle them, then `bunx expo run:android` to launch without rebuilding the bundle.
 
-   ```bash
-   npm install
-   ```
+The WebView starts the bundled firmware when the app opens. The display shows the launcher when boot completes. Use the D-pad and Select to open a built-in app, Cancel to go back, or Boot to return to the launcher. Boot is on the physical badge’s back and exposed on the Android shell.
 
-2. Start the app
+## Update the emulator
 
-This steps builds the dependencies for the development client.
+The [published hardware dimensions](https://solana.com/breakpoint/badge#case) guide the local board layout in `src/emulator/index.html` and `badge.css`. The [official browser emulator](https://solana.com/breakpoint/badge/emulator) and Android use the same Solana OS WebAssembly runtime. Firmware and built-in app updates come from rebuilding or repacking the matching runtime pair. The Android board stays bundled and can boot offline.
 
-```bash
-npm run android
-```
+## Connect to the App Store
 
-In the output, you'll find options to open the app in a:
+Open **Wi-Fi** on the badge and join **Emulator Guest**. Solana OS simulates the connection, then sends real badge API requests over Android’s internet connection. Open **App Store** to browse or download apps. The Android WebView saves the emulated microSD card in IndexedDB and restores it at boot, so installed apps and their files survive emulator restarts. Firmware built by another tool needs the Emscripten `preRun` hook enabled to restore the card.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Uniwind documentation](https://uniwind.dev/): Learn how to style your app with Tailwind CSS.
-- [Solana documentation](https://solana.com/docs): Learn how to build on Solana.
+To link the emulated badge, open **My Badge** after connecting. When the badge shows its claim QR code, tap **Link this badge** below the emulator to open the same claim link in Android’s browser. After linking, use **Select** in My Badge to refresh its status.

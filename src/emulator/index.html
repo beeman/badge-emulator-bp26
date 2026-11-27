@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Solana OS</title>
+    <!-- BADGE STYLE -->
+  </head>
+  <body>
+    <main>
+      <div class="badge" aria-label="Breakpoint 2026 badge">
+        <span class="slot slot-left" aria-hidden="true"></span>
+        <span class="slot slot-right" aria-hidden="true"></span>
+        <div class="silkscreen" aria-hidden="true"><strong>BREAKPOINT</strong><span>2026 · SOLANA</span></div>
+        <div class="leds" aria-hidden="true">
+          <i style="--x: 28.55%; --y: 5.56%"></i>
+          <i style="--x: 37.28%; --y: 5.56%"></i>
+          <i style="--x: 46.02%; --y: 5.56%"></i>
+          <i style="--x: 54.53%; --y: 5.56%"></i>
+          <i style="--x: 63.11%; --y: 5.56%"></i>
+          <i style="--x: 71.67%; --y: 5.56%"></i>
+          <i style="--x: 94.72%; --y: 25.48%"></i>
+          <i style="--x: 94.66%; --y: 54.08%"></i>
+        </div>
+        <div class="panel"></div>
+        <canvas width="320" height="240" aria-label="Badge display"></canvas>
+        <fieldset id="controls" disabled aria-label="Badge buttons">
+          <button class="key" style="--x: 23.59%; --y: 71.98%" data-key="0" aria-label="Up"><span>▲</span></button>
+          <button class="key" style="--x: 23.59%; --y: 87.47%" data-key="1" aria-label="Down"><span>▼</span></button>
+          <button class="key" style="--x: 12.54%; --y: 79.73%" data-key="2" aria-label="Left"><span>◀</span></button>
+          <button class="key" style="--x: 34.76%; --y: 79.73%" data-key="3" aria-label="Right"><span>▶</span></button>
+          <button class="key select" style="--x: 73.42%; --y: 84.57%" data-key="4"><span>SELECT</span></button>
+          <button class="key cancel" style="--x: 87.43%; --y: 74.89%" data-key="5"><span>CANCEL</span></button>
+          <button class="boot" data-key="6" aria-label="Boot, return to launcher">BOOT</button>
+        </fieldset>
+      </div>
+      <p id="status" role="status">Booting Solana OS…</p>
+      <p id="storage-status" role="status" hidden></p>
+    </main>
+
+    <!-- SD STORAGE -->
+    <!-- FIRMWARE -->
+    <!-- WASM -->
+    <script>
+      const { loadCard, restoreCard, createCardSaver } = globalThis.badgeCardStorage
+      const status = document.querySelector('#status')
+      const storageStatus = document.querySelector('#storage-status')
+      const controls = document.querySelector('#controls')
+      const canvas = document.querySelector('canvas')
+      const leds = document.querySelectorAll('.leds i')
+      const context = canvas.getContext('2d')
+      const image = context.createImageData(canvas.width, canvas.height)
+      let failed = false
+      let cloudStatusOutput = null
+      let lastClaimUrl = null
+
+      function publishClaimUrl(url) {
+        if (url === lastClaimUrl) return
+        lastClaimUrl = url
+        window.ReactNativeWebView?.postMessage(url ? 'claim:' + url : 'claim:')
+      }
+
+      function fail(error) {
+        failed = true
+        publishClaimUrl(null)
+        controls.disabled = true
+        status.hidden = false
+        status.textContent = 'Solana OS stopped: ' + error
+      }
+
+      addEventListener('error', (event) => fail(event.message))
+      addEventListener('unhandledrejection', (event) => fail(event.reason))
+
+      async function boot() {
+        let card
+        try {
+          card = await loadCard()
+        } catch {
+          storageStatus.textContent = 'Could not load the saved SD card. Changes will not be saved this session.'
+          storageStatus.hidden = false
+        }
+        let saveCard = async () => {}
+        let restored = false
+        const data = document.querySelector('#firmware-wasm')
+        const bytes = Uint8Array.from(atob(data.textContent), (byte) => byte.charCodeAt(0))
+        data.remove()
+        const wasmUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/wasm' }))
+
+        let firmware
+        try {
+          firmware = await SolanaOS({
+            server: 'https://badge-api.solana.com',
+            print: (line) => cloudStatusOutput?.push(line),
+            locateFile: () => wasmUrl,
+            onAbort: fail,
+            preRun: [
+              (module) => {
+                if (card?.length) restoreCard(module.FS, card)
+                restored = true
+              },
+            ],
+            onRestart: async () => {
+              await saveCard()
+              window.ReactNativeWebView?.postMessage('restart')
+            },
+          })
+        } finally {
+          URL.revokeObjectURL(wasmUrl)
+        }
+
+        if (restored && card) {
+          saveCard = createCardSaver(firmware.FS, (failed) => {
+            storageStatus.textContent = 'Could not save the SD card. The emulator will retry.'
+            storageStatus.hidden = !failed
+          })
+          setInterval(saveCard, 1000)
+          addEventListener('pagehide', saveCard)
+          document.addEventListener('visibilitychange', () => {
+            if (document.hidden) void saveCard()
+          })
+        } else if (card) {
+          storageStatus.textContent = 'This firmware build does not support saving the SD card.'
+          storageStatus.hidden = false
+        }
+
+        const pressed = new Map()
+        function updateButtons() {
+          firmware._emu_buttons_set([...pressed.values()].reduce((mask, press) => mask | press.line, 0))
+        }
+
+        function pressButton(input, line) {
+          pressed.set(input, { line, started: performance.now() })
+          updateButtons()
+        }
+
+        function releaseButton(input) {
+          const press = pressed.get(input)
+          if (!press) return
+
+          // Keep a quick tap visible to the firmware scheduler.
+          setTimeout(
+            () => {
+              if (pressed.get(input) === press) {
+                pressed.delete(input)
+                updateButtons()
+              }
+            },
+            Math.max(0, 50 - (performance.now() - press.started)),
+          )
+        }
+
+        for (const button of controls.querySelectorAll('button')) {
+          const line = firmware._emu_button_line(Number(button.dataset.key))
+          button.addEventListener('pointerdown', (event) => {
+            button.setPointerCapture(event.pointerId)
+            pressButton(event.pointerId, line)
+          })
+          button.addEventListener('lostpointercapture', (event) => releaseButton(event.pointerId))
+          button.addEventListener('click', (event) => {
+            // Keyboard and accessibility activation do not send pointer events.
+            if (event.detail === 0) {
+              const activation = Symbol()
+              pressButton(activation, line)
+              releaseButton(activation)
+            }
+          })
+        }
+        addEventListener('blur', () => {
+          pressed.clear()
+          updateButtons()
+        })
+        let lastFrame = 0
+        let lastLedVersion = 0
+        let booted = false
+        let nextClaimCheck = 0
+
+        function checkClaim(now) {
+          if (now < nextClaimCheck) return
+          nextClaimCheck = now + 500
+          if (firmware.UTF8ToString(firmware._emu_current_app()) !== 'badge') {
+            publishClaimUrl(null)
+            return
+          }
+
+          // Read the same cloud state that supplies the QR code using the
+          // emulator's existing console API. Keep the claim URL out of logs.
+          cloudStatusOutput = []
+          try {
+            firmware.ccall('emu_console', null, ['string'], ['cloud'])
+            const output = cloudStatusOutput.join('\n')
+            const claim = /^cloud: unclaimed\b/m.test(output) && /^\s*claim=(https:\/\/\S+)$/m.exec(output)
+            publishClaimUrl(claim ? claim[1] : null)
+          } finally {
+            cloudStatusOutput = null
+          }
+        }
+
+        function draw(now) {
+          if (failed) return
+          if (booted) checkClaim(now)
+          const frame = firmware._emu_frame()
+          if (frame !== lastFrame) {
+            const address = firmware._emu_framebuffer()
+            image.data.set(firmware.HEAPU8.subarray(address, address + image.data.length))
+            context.putImageData(image, 0, 0)
+            lastFrame = frame
+
+            if (!booted && firmware.UTF8ToString(firmware._emu_current_app()) === 'launcher') {
+              booted = true
+              status.hidden = true
+              controls.disabled = false
+            }
+          }
+          const ledVersion = firmware._emu_leds_version()
+          if (ledVersion !== lastLedVersion) {
+            const start = firmware._emu_leds() / Uint32Array.BYTES_PER_ELEMENT
+            leds.forEach((led, index) => {
+              const color = firmware.HEAPU32[start + index]
+              if (color) {
+                led.style.setProperty('--light', '#' + color.toString(16).padStart(6, '0'))
+                led.classList.add('lit')
+              } else {
+                led.classList.remove('lit')
+              }
+            })
+            lastLedVersion = ledVersion
+          }
+          canvas.style.opacity = firmware._emu_backlight() / 100
+          requestAnimationFrame(draw)
+        }
+
+        requestAnimationFrame(draw)
+      }
+
+      boot().catch(fail)
+    </script>
+  </body>
+</html>
