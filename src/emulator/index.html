@@ -19,8 +19,8 @@
           <i style="--x: 54.53%; --y: 5.56%"></i>
           <i style="--x: 63.11%; --y: 5.56%"></i>
           <i style="--x: 71.67%; --y: 5.56%"></i>
-          <i style="--x: 94.72%; --y: 25.48%"></i>
-          <i style="--x: 94.66%; --y: 54.08%"></i>
+          <i style="--x: 98.5%; --y: 25.48%"></i>
+          <i style="--x: 98.5%; --y: 54.08%"></i>
         </div>
         <div class="panel"></div>
         <canvas width="320" height="240" aria-label="Badge display"></canvas>
@@ -42,14 +42,32 @@
     <!-- FIRMWARE -->
     <!-- WASM -->
     <script>
-      const { loadCard, restoreCard, createCardSaver } = globalThis.badgeCardStorage
+      const cardStorage = globalThis.badgeCardStorage
       const status = document.querySelector('#status')
       const storageStatus = document.querySelector('#storage-status')
       const controls = document.querySelector('#controls')
       const canvas = document.querySelector('canvas')
       const leds = document.querySelectorAll('.leds i')
       const context = canvas.getContext('2d')
-      const image = context.createImageData(canvas.width, canvas.height)
+      const framebuffer = document.createElement('canvas')
+      framebuffer.width = canvas.width
+      framebuffer.height = canvas.height
+      const framebufferContext = framebuffer.getContext('2d')
+      const image = framebufferContext.createImageData(framebuffer.width, framebuffer.height)
+
+      function paintDisplay() {
+        context.imageSmoothingEnabled = false
+        context.drawImage(framebuffer, 0, 0, canvas.width, canvas.height)
+      }
+
+      // Match the LCD's backing bitmap to physical pixels so Android doesn't
+      // interpolate the 320 × 240 framebuffer during WebView composition.
+      new ResizeObserver(([entry]) => {
+        const pixelSize = entry.devicePixelContentBoxSize?.[0]
+        canvas.width = pixelSize?.inlineSize ?? Math.round(entry.contentRect.width * devicePixelRatio)
+        canvas.height = pixelSize?.blockSize ?? Math.round(entry.contentRect.height * devicePixelRatio)
+        paintDisplay()
+      }).observe(canvas)
       let failed = false
       let cloudStatusOutput = null
       let lastClaimUrl = null
@@ -74,7 +92,7 @@
       async function boot() {
         let card
         try {
-          card = await loadCard()
+          card = await cardStorage.loadCard()
         } catch {
           storageStatus.textContent = 'Could not load the saved SD card. Changes will not be saved this session.'
           storageStatus.hidden = false
@@ -95,7 +113,7 @@
             onAbort: fail,
             preRun: [
               (module) => {
-                if (card?.length) restoreCard(module.FS, card)
+                if (card?.length) cardStorage.restoreCard(module.FS, card)
                 restored = true
               },
             ],
@@ -109,7 +127,7 @@
         }
 
         if (restored && card) {
-          saveCard = createCardSaver(firmware.FS, (failed) => {
+          saveCard = cardStorage.createCardSaver(firmware.FS, (failed) => {
             storageStatus.textContent = 'Could not save the SD card. The emulator will retry.'
             storageStatus.hidden = !failed
           })
@@ -202,7 +220,8 @@
           if (frame !== lastFrame) {
             const address = firmware._emu_framebuffer()
             image.data.set(firmware.HEAPU8.subarray(address, address + image.data.length))
-            context.putImageData(image, 0, 0)
+            framebufferContext.putImageData(image, 0, 0)
+            paintDisplay()
             lastFrame = frame
 
             if (!booted && firmware.UTF8ToString(firmware._emu_current_app()) === 'launcher') {
