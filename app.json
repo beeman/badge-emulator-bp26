@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "scheme": "badge-emulator-bp26",
+    "userInterfaceStyle": "automatic",
+    "orientation": "default",
+    "web": {
+      "output": "static"
+    },
+    "name": "badge-emulator-bp26",
+    "slug": "badge-emulator-bp26",
+    "android": {
+      "package": "com.anonymous.badge_emulator_bp26"
+    },
+    "plugins": [
+      [
+        "expo-dev-client",
+        {
+          "showMenuAtLaunch": false,
+          "skipOnboarding": true
+        }
+      ],
+      "expo-router"
+    ]
+  }
+}
