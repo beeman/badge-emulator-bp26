@@ -6,10 +6,10 @@
     "web": {
       "output": "static"
     },
-    "name": "badge-emulator-bp26",
+    "name": "BP26 Badge Emulator",
     "slug": "badge-emulator-bp26",
     "android": {
-      "package": "com.anonymous.badge_emulator_bp26"
+      "package": "io.github.beeman.badge_emulator_bp26"
     },
     "plugins": [
       [
@@ -20,6 +20,7 @@
         }
       ],
       "expo-router"
-    ]
+    ],
+    "icon": "./assets/icon.png"
   }
 }

@@ -1,0 +1,100 @@
+:root {
+  color-scheme: dark;
+  background: #101319;
+  color: #edf1ef;
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(ellipse at top, #18251f, transparent 36rem);
+}
+
+main {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 3rem 1.25rem;
+}
+
+.policy {
+  max-width: 42rem;
+}
+
+a {
+  color: #78f5bd;
+}
+
+a:focus-visible {
+  outline: 2px solid #cbb8ff;
+  outline-offset: 4px;
+}
+
+h1,
+h2 {
+  line-height: 1.15;
+}
+
+h1 {
+  margin: 0.75rem 0;
+  font-size: clamp(2rem, 6vw, 3.75rem);
+  letter-spacing: -0.04em;
+}
+
+h2 {
+  margin: 2rem 0 0.5rem;
+}
+
+.intro {
+  max-width: 38rem;
+  color: #c5cfca;
+}
+
+.icon {
+  display: block;
+  border: 1px solid #3a4943;
+  border-radius: 22%;
+}
+
+.screenshots {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 2rem 0;
+}
+
+.screenshots a {
+  overflow: hidden;
+  border: 1px solid #34443d;
+  border-radius: 0.75rem;
+  background: #18181b;
+}
+
+.screenshots a:hover {
+  border-color: #78f5bd;
+}
+
+.screenshots img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #34443d;
+}
+
+code {
+  overflow-wrap: anywhere;
+  color: #cbb8ff;
+}
+
+@media (max-width: 36rem) {
+  .screenshots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

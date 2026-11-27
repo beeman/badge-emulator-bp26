@@ -23,3 +23,7 @@ The [published hardware dimensions](https://solana.com/breakpoint/badge#case) gu
 Open **Wi-Fi** on the badge and join **Emulator Guest**. Solana OS simulates the connection, then sends real badge API requests over Android’s internet connection. Open **App Store** to browse or download apps. The Android WebView saves the emulated microSD card in IndexedDB and restores it at boot, so installed apps and their files survive emulator restarts. Firmware built by another tool needs the Emscripten `preRun` hook enabled to restore the card.
 
 To link the emulated badge, open **My Badge** after connecting. When the badge shows its claim QR code, tap **Link this badge** below the emulator to open the same claim link in Android’s browser. After linking, use **Select** in My Badge to refresh its status.
+
+## Website
+
+The static site follows the [Pocket Address](https://github.com/beeman/pocket-address) GitHub Pages layout. In the repository’s Pages settings, choose **Deploy from a branch** with `main` and `/docs`. The site includes separate privacy policy and terms of service URLs. The source and store listing share the screenshots in `docs/screenshots/`.
